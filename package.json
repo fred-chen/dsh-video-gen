@@ -1,6 +1,6 @@
 {
   "name": "dsh-video-gen",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DeepSeek Harness 文生视频插件：调用可配置的 OpenAI/FastVideo 兼容 /v1/videos 端点，分辨率、时长、音频、sampler 可配置，生成结果保存到会话工作目录并在对话卡片中播放。默认端点 http://ai9700:8080/upstream/MiniMax-H3-Video/v1（插件自动补 /videos）。",
   "type": "module",
   "main": "lib/index.js",
