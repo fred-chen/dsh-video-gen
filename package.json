@@ -1,0 +1,97 @@
+{
+  "name": "dsh-video-gen",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness 文生视频插件：调用可配置的 OpenAI/FastVideo 兼容 /v1/videos 端点，分辨率、时长、音频、sampler 可配置，生成结果保存到会话工作目录并在对话卡片中播放。默认端点 http://ai9700:5840/v1/videos。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/core.js",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "video-generation",
+    "text-to-video",
+    "fastvideo",
+    "h3",
+    "radiance"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-client-ui-plugin-manager": "^0.1.7-rc.1 || ^0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-ui-renderer": "^0.1.7-rc.1 || ^0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-ui-tool": "^0.1.7-rc.1 || ^0.2.0-rc.1",
+    "@deepseek-ai/dsh-settings": "^0.1.7-rc.1 || ^0.2.0-rc.1",
+    "@deepseek-ai/dsh-tools": "^0.1.7-rc.1 || ^0.2.0-rc.1",
+    "@deepseek-ai/schemastery": "^3.18.4",
+    "react": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-plugin-manager": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-renderer": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-tool": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-settings": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/schemastery": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-plugin-manager",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-tool"
+      ],
+      "platform": "web"
+    },
+    "engines": {
+      "dsh": ">=0.1.7-rc.1"
+    }
+  },
+  "scripts": {
+    "test": "node test/core.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fred-chen/dsh-video-gen.git"
+  },
+  "homepage": "https://github.com/fred-chen/dsh-video-gen",
+  "bugs": {
+    "url": "https://github.com/fred-chen/dsh-video-gen/issues"
+  }
+}

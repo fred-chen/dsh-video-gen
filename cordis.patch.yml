@@ -1,0 +1,20 @@
+# dsh-video-gen — 文生视频
+#
+# 注册宿主插件行（设置页、video_generate 工具、视频流路由都在这一行里）。
+# 默认端点按需求设为 http://ai9700:5840/v1/videos。
+# apiKey 是 secret 字段，保存后设置页只显示“已保存”，不回传明文。
+- insert:
+    - id: video-gen
+      name: dsh-video-gen
+      config:
+        enabled: true
+        endpoint: http://ai9700:5840/v1/videos
+        model: fastvideo-fasth3-8-step-v2
+        size: 1344x768
+        seconds: 5
+        audio: keep
+        sampler: res_multistep
+        outputDir: .dsh-video-gen
+        timeoutSec: 900
+        pollIntervalSec: 2
+        deleteRemote: true
