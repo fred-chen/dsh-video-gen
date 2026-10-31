@@ -6,7 +6,7 @@ DeepSeek Harness 插件：**文本 → 视频**。
 
 调用 OpenAI/FastVideo 兼容的 `/v1/videos` 异步接口，轮询生成状态，把 MP4 下载到当前会话工作目录，并在对话卡片中直接播放。端点、端口、模型、分辨率、时长、音频、sampler、seed、超时等均可配置。
 
-- **默认端点**：`http://ai9700:5840/v1/videos`
+- **默认端点**：`http://ai9700:8080/upstream/MiniMax-H3-Video/v1`（插件自动补 `/videos`，实际请求 `.../v1/videos`）
 - **默认模型**：`fastvideo-fasth3-8-step-v2`
 - **默认分辨率**：`1344x768`（该模型上限画布，约 1.03 MP）
 - **工具名**：`video_generate`
@@ -24,7 +24,7 @@ DeepSeek Harness 插件：**文本 → 视频**。
 
 ## 实测 API 约定
 
-本插件按 `http://ai9700:5840` 的 FastVideo/radiance 1.13.0 实测字段实现：
+本插件按 FastVideo/radiance 1.13.0 实测字段实现；当前默认端点经 `http://ai9700:8080/upstream/MiniMax-H3-Video/v1` 代理访问同一模型（实测 `/v1/videos`、`/health` 可用）：
 
 | 字段 | 说明 |
 |---|---|
@@ -95,7 +95,7 @@ DSH 会通过 profile manifest / HMR 重新组装插件树；宿主插件代码�
 | 字段 | 默认 | 说明 |
 |---|---|---|
 | `enabled` | `true` | 是否注册 `video_generate` 工具 |
-| `endpoint` | `http://ai9700:5840/v1/videos` | 完整 API 端点（含端口）。也可只填 `http://host:port`，插件自动补 `/v1/videos` |
+| `endpoint` | `http://ai9700:8080/upstream/MiniMax-H3-Video/v1` | 基础端点（含端口）。插件自动补 `/videos`；也可填完整 `.../v1/videos` 或只填 `http://host:port` |
 | `apiKey` | 空 | 可选；secret 字段，保存后只显示「已保存」，不回传明文。FastVideo 本地通常不需要 |
 | `model` | `fastvideo-fasth3-8-step-v2` | 服务端 `/v1/models` 公布的模型 ID |
 | `size` | `1344x768` | 分辨率 |
@@ -166,8 +166,8 @@ its canvas at that ratio is 768x1344
 
 ## 常见问题
 
-- **404 / 端点错误**：检查 `endpoint` 是否包含 `/v1/videos`，端口是否为 `5840`。设置页点「测试连接」查看 `/v1/models`。
-- **模型 ID 不匹配**：在设置页「测试连接」读取 `models` 列表，把 `model` 改成列表中的 `id`（本机为 `fastvideo-fasth3-8-step-v2`）。
+- **404 / 端点错误**：检查 `endpoint` 是否指向 `/v1`（插件自动补 `/videos`），端口是否为 `8080`。设置页点「测试连接」会检查 `/health` 与视频列表；该 upstream 代理的 `/v1/models` 可能超时，不影响生成。
+- **模型 ID 不匹配**：默认 `fastvideo-fasth3-8-step-v2` 已由 `/health` 返回；若代理暴露模型列表，可在设置页「测试连接」中核对。
 - **时长被服务端取整**：例如请求 1 秒，H3 会按合法帧网格输出 5.17 秒；结果里会给出 `warning`，说明实际时长。
 - **轮询超时**：生成 14 秒视频可能需要更久；把 `timeoutSec` 调大。超时不会取消服务端 GPU 任务，返回的 job id 仍可查询。
 - **音频移除失败**：确认 `ffmpeg` 已安装：`ffmpeg -version`。

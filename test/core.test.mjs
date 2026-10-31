@@ -48,6 +48,17 @@ test("models/health URL derivation", () => {
   assert.equal(deriveHealthUrl("http://ai9700:5840/v1/videos"), "http://ai9700:5840/health");
 });
 
+test("prefixed upstream endpoint health derivation", () => {
+  assert.equal(
+    deriveHealthUrl("http://ai9700:8080/upstream/MiniMax-H3-Video/v1"),
+    "http://ai9700:8080/upstream/MiniMax-H3-Video/health"
+  );
+  assert.equal(
+    normalizeEndpoint("http://ai9700:8080/upstream/MiniMax-H3-Video/v1"),
+    "http://ai9700:8080/upstream/MiniMax-H3-Video/v1/videos"
+  );
+});
+
 test("size: default canvas accepted", () => {
   assert.equal(normalizeSize("1344x768"), "1344x768");
 });
