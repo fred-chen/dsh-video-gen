@@ -4,7 +4,7 @@ GitHub：<https://github.com/fred-chen/dsh-video-gen>
 
 DeepSeek Harness 插件：**文本 → 视频**。
 
-调用 OpenAI/FastVideo 兼容的 `/v1/videos` 异步接口，轮询生成状态，把 MP4 下载到当前会话工作目录，并在对话卡片中直接播放。端点、端口、模型、分辨率、时长、音频、sampler、seed、超时等均可配置。
+调用 OpenAI/FastVideo 兼容的 `/v1/videos` 异步接口，轮询生成状态，把 MP4 下载到当前会话工作目录，并在对话卡片中直接播放。端点、端口、模型、分辨率、时长、音频、sampler、seed、正向/负向系统提示词、超时等均可配置。
 
 - **默认端点**：`http://ai9700:8080/upstream/MiniMax-H3-Video/v1`（插件自动补 `/videos`，实际请求 `.../v1/videos`）
 - **默认模型**：`fastvideo-fasth3-8-step-v2`
@@ -14,8 +14,8 @@ DeepSeek Harness 插件：**文本 → 视频**。
 
 ## 功能
 
-1. **设置页**：端点、API Key（可选）、模型、分辨率、时长、音频、sampler、seed、输出目录、轮询超时/间隔、是否删除远端任务。
-2. **`video_generate` 工具**：模型可按 prompt 生成视频；调用参数可临时覆盖设置（分辨率、时长、音频、seed、模型、sampler、文件名）。
+1. **设置页**：端点、API Key（可选）、模型、分辨率、时长、音频、sampler、seed、正向/负向系统提示词、输出目录、轮询超时/间隔、是否删除远端任务。
+2. **`video_generate` 工具**：模型可按 prompt 生成视频；调用参数可临时覆盖设置（分辨率、时长、音频、seed、模型、sampler、文件名、正向/负向提示词）。
 3. **本地保存**：MP4 写入会话工作目录（默认 `.dsh-video-gen/`），返回绝对路径。
 4. **浏览器预览**：插件注册 `/api/dsh-video-gen/artifacts/<token>` 流路由，支持 Range 请求，对话卡片中可直接播放、下载。
 5. **音频控制**：H3 模型默认随视频生成 AAC 音轨；`withAudio:false` / 设置页「移除音轨」会在下载后调用本机 `ffmpeg -an` 移除。
@@ -37,6 +37,8 @@ DeepSeek Harness 插件：**文本 → 视频**。
 | `task` | 服务端支持 `t2va`（文本→视频+音频），插件不显式发送 |
 
 服务端**不接受** `generate_sound`、`audio`、`width`、`height`、`num_frames`、`quality`、`steps` 等字段（实测会返回 400）。因此音频关闭采用「本地移除音轨」而不是服务端开关。
+
+提示词字段也有限制：实测 `positive_prompt` 不是 `/v1/videos` 字段（400），`negative_prompt` 字段虽被识别，但该模型返回 `this model takes no guidance`（400）。所以插件不发送独立的正/负字段，而是在本地把正向提示词、用户 prompt 和 `Avoid: 负向提示词` 合成为一个 `prompt`。这是文本约束，不等同于独立的 negative guidance。
 
 响应流程：
 
@@ -90,6 +92,15 @@ cp -R /path/to/dsh-video-gen node_modules/dsh-video-gen
 
 DSH 会通过 profile manifest / HMR 重新组装插件树；宿主插件代码需要重启 DSH（或在插件页把 `video-gen` 行临时关闭再启用）才会重新加载并注册 `video_generate` 工具。打开侧栏「插件」应看到 `dsh-video-gen`，其行 `video-gen` 有 **Configure** 按钮。
 
+## 默认系统提示词
+
+- **正向**：
+  `shot on 35mm film, Kodak Portra 400, soft overcast daylight, matte skin with visible pores and fine facial hair, natural lip texture, small skin imperfections, muted earthy colour grade, low contrast, soft highlight roll-off, subtle film grain, documentary realism, no retouching`
+- **负向**：
+  `oil painting, ultra detailed, 8k, hyperrealistic, cinematic glow, rim light, glossy, flawless/beauty retouched skin, HDR, dramatic lighting`
+
+设置页可逐字编辑或清空；工具调用参数 `positivePrompt` / `negativePrompt` 可只对单次调用覆盖。默认文本已写入 `cordis.patch.yml` 和 Config schema。
+
 ## 配置项
 
 | 字段 | 默认 | 说明 |
@@ -102,6 +113,8 @@ DSH 会通过 profile manifest / HMR 重新组装插件树；宿主插件代码�
 | `seconds` | `5` | 请求时长；0 = 服务端默认帧数 |
 | `audio` | `keep` | `keep` 保留音轨 / `strip` 下载后用 ffmpeg 移除 |
 | `sampler` | `res_multistep` | `euler` 或 `res_multistep` |
+| `positivePrompt` | 胶片纪实风格默认文案 | 正向系统提示词；置于用户 prompt 前 |
+| `negativePrompt` | 避免油画/HDR/过度修肤默认文案 | 负向约束；以 `Avoid: ...` 置于 prompt 末尾 |
 | `seed` | 空（随机） | 整数可复现 |
 | `outputDir` | `.dsh-video-gen` | 相对会话工作目录；可写绝对路径 |
 | `timeoutSec` | `900` | 轮询超时；超时不取消服务端 GPU 任务 |
@@ -118,6 +131,8 @@ DSH 会通过 profile manifest / HMR 重新组装插件树；宿主插件代码�
     "size": "768x1344",
     "seconds": 8,
     "withAudio": false,
+    "positivePrompt": "shot on 35mm film, Kodak Portra 400",
+    "negativePrompt": "oil painting, HDR, glossy",
     "seed": 42,
     "sampler": "res_multistep",
     "fileName": "lighthouse"
@@ -132,7 +147,8 @@ DSH 会通过 profile manifest / HMR 重新组装插件树；宿主插件代码�
   "id": "video_...",
   "status": "completed",
   "model": "fastvideo-fasth3-8-step-v2",
-  "prompt": "...",
+  "prompt": "用户原始描述",
+  "effectivePrompt": "正向提示词 + 用户描述 + Avoid: 负向提示词",
   "size": "768x1344",
   "seconds": 5.17,
   "withAudio": false,

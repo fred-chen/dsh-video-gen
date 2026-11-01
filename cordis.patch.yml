@@ -15,6 +15,10 @@
         seconds: 5
         audio: keep
         sampler: res_multistep
+        positivePrompt: >-
+          shot on 35mm film, Kodak Portra 400, soft overcast daylight, matte skin with visible pores and fine facial hair, natural lip texture, small skin imperfections, muted earthy colour grade, low contrast, soft highlight roll-off, subtle film grain, documentary realism, no retouching
+        negativePrompt: >-
+          oil painting, ultra detailed, 8k, hyperrealistic, cinematic glow, rim light, glossy, flawless/beauty retouched skin, HDR, dramatic lighting
         outputDir: .dsh-video-gen
         timeoutSec: 900
         pollIntervalSec: 2

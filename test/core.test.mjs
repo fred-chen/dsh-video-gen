@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   buildVideoPayload,
+  composePrompt,
   deriveModelsUrl,
   deriveHealthUrl,
   formatApiError,
@@ -100,6 +101,15 @@ test("seed: null / integer", () => {
 test("sampler aliases", () => {
   assert.equal(normalizeSampler("RES_MULTISTEP"), "res_multistep");
   assert.throws(() => normalizeSampler("dpm"), /euler/);
+});
+
+test("prompt composition", () => {
+  assert.equal(
+    composePrompt({ prompt: "a cup", positivePrompt: "shot on film", negativePrompt: "oil painting" }),
+    "shot on film\n\na cup\n\nAvoid: oil painting"
+  );
+  assert.equal(composePrompt({ prompt: "a cup", positivePrompt: "", negativePrompt: "" }), "a cup");
+  assert.equal(composePrompt({ prompt: "a cup", negativePrompt: "glossy" }), "a cup\n\nAvoid: glossy");
 });
 
 test("payload omits absent optional fields", () => {
