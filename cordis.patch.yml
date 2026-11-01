@@ -10,11 +10,13 @@
       config:
         enabled: true
         endpoint: http://ai9700:8080/upstream/MiniMax-H3-Video/v1
-        model: fastvideo-fasth3-8-step-v2
+        model: minimax-h3
         size: 1344x768
         seconds: 5
         audio: keep
         sampler: res_multistep
+        numInferenceSteps: 25
+        latentUpscale: 4
         positivePrompt: >-
           shot on 35mm film, Kodak Portra 400, soft overcast daylight, matte skin with visible pores and fine facial hair, natural lip texture, small skin imperfections, muted earthy colour grade, low contrast, soft highlight roll-off, subtle film grain, documentary realism, no retouching
         negativePrompt: >-

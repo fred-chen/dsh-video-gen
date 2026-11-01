@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import {
   buildVideoPayload,
   composePrompt,
+  normalizeInferenceSteps,
+  normalizeLatentUpscale,
   deriveModelsUrl,
   deriveHealthUrl,
   formatApiError,
@@ -129,6 +131,14 @@ test("payload omits absent optional fields", () => {
   });
 });
 
+test("inference steps and latent upscale validation", () => {
+  assert.equal(normalizeInferenceSteps(25), 25);
+  assert.equal(normalizeInferenceSteps(9), 9);
+  assert.throws(() => normalizeInferenceSteps(0), /1–100/);
+  assert.equal(normalizeLatentUpscale(4), 4);
+  assert.throws(() => normalizeLatentUpscale(5), /1–4/);
+});
+
 test("payload includes seed and seconds", () => {
   const payload = buildVideoPayload({
     prompt: "a fox",
@@ -145,6 +155,29 @@ test("payload includes seed and seconds", () => {
     sampler: "euler",
     seconds: 8,
     seed: 42,
+  });
+});
+
+test("payload includes inference steps and latent upscale", () => {
+  const payload = buildVideoPayload({
+    prompt: "a cup",
+    model: "minimax-h3",
+    size: "512x512",
+    seconds: 5,
+    sampler: "res_multistep",
+    seed: 42,
+    numInferenceSteps: 25,
+    latentUpscale: 4,
+  });
+  assert.deepEqual(payload, {
+    prompt: "a cup",
+    size: "512x512",
+    sampler: "res_multistep",
+    model: "minimax-h3",
+    seconds: 5,
+    seed: 42,
+    num_inference_steps: 25,
+    latent_upscale: 4,
   });
 });
 

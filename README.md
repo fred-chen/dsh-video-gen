@@ -4,18 +4,18 @@ GitHub：<https://github.com/fred-chen/dsh-video-gen>
 
 DeepSeek Harness 插件：**文本 → 视频**。
 
-调用 OpenAI/FastVideo 兼容的 `/v1/videos` 异步接口，轮询生成状态，把 MP4 下载到当前会话工作目录，并在对话卡片中直接播放。端点、端口、模型、分辨率、时长、音频、sampler、seed、正向/负向系统提示词、超时等均可配置。
+调用 OpenAI/FastVideo 兼容的 `/v1/videos` 异步接口，轮询生成状态，把 MP4 下载到当前会话工作目录，并在对话卡片中直接播放。端点、端口、模型、分辨率、时长、音频、sampler、seed、推理步数、latent_upscale、正向/负向系统提示词、超时等均可配置。
 
 - **默认端点**：`http://ai9700:8080/upstream/MiniMax-H3-Video/v1`（插件自动补 `/videos`，实际请求 `.../v1/videos`）
-- **默认模型**：`fastvideo-fasth3-8-step-v2`
+- **默认模型**：`minimax-h3`
 - **默认分辨率**：`1344x768`（该模型上限画布，约 1.03 MP）
 - **工具名**：`video_generate`
 - **设置页**：侧栏「插件」→「dsh-video-gen」→「video-gen」→ Configure
 
 ## 功能
 
-1. **设置页**：端点、API Key（可选）、模型、分辨率、时长、音频、sampler、seed、正向/负向系统提示词（各自可禁用）、输出目录、轮询超时/间隔、是否删除远端任务。
-2. **`video_generate` 工具**：模型可按 prompt 生成视频；调用参数可临时覆盖设置（分辨率、时长、音频、seed、模型、sampler、文件名、正向/负向提示词）。
+1. **设置页**：端点、API Key（可选）、模型、分辨率、时长、音频、sampler、seed、推理步数、latent_upscale、正向/负向系统提示词（各自可禁用）、输出目录、轮询超时/间隔、是否删除远端任务。
+2. **`video_generate` 工具**：模型可按 prompt 生成视频；调用参数可临时覆盖设置（分辨率、时长、音频、seed、模型、sampler、推理步数、latent_upscale、文件名、正向/负向提示词）。
 3. **本地保存**：MP4 写入会话工作目录（默认 `.dsh-video-gen/`），返回绝对路径。
 4. **浏览器预览**：插件注册 `/api/dsh-video-gen/artifacts/<token>` 流路由，支持 Range 请求，对话卡片中可直接播放、下载。
 5. **音频控制**：H3 模型默认随视频生成 AAC 音轨；`withAudio:false` / 设置页「移除音轨」会在下载后调用本机 `ffmpeg -an` 移除。
@@ -24,21 +24,25 @@ DeepSeek Harness 插件：**文本 → 视频**。
 
 ## 实测 API 约定
 
-本插件按 FastVideo/radiance 1.13.0 实测字段实现；当前默认端点经 `http://ai9700:8080/upstream/MiniMax-H3-Video/v1` 代理访问同一模型（实测 `/v1/videos`、`/health` 可用）：
+本插件按当前 `minimax-h3` / OpenAI 兼容 `/v1/videos` 端点实测字段实现；默认端点经 `http://ai9700:8080/upstream/MiniMax-H3-Video/v1` 代理（实测 `/v1/videos`、`/health` 可用）：
 
 | 字段 | 说明 |
 |---|---|
 | `prompt` | 必填，≤8192 字符 |
-| `model` | 模型 ID；默认 `fastvideo-fasth3-8-step-v2` |
+| `model` | 模型 ID；默认 `minimax-h3` |
 | `size` | `WIDTHxHEIGHT`；每边 32 的倍数、≥256、总像素 ≤1,032,192、宽高比 ≤4:1 |
 | `seconds` | 整数秒；服务端会按合法帧网格取整（例如请求 6 秒可能得到 6.58 秒） |
 | `seed` | 整数；省略则随机 |
 | `sampler` | `euler` 或 `res_multistep` |
+| `num_inference_steps` | 当前 `minimax-h3` 实测接受 `25`；较早的 `fastvideo-fasth3-8-step-v2` 模型只接受 `9`，插件对 schedule 错误会自动回退 |
+| `latent_upscale` | 1–4 的整数；`4` 表示从更小的 latent 分辨率上采样 |
 | `task` | 服务端支持 `t2va`（文本→视频+音频），插件不显式发送 |
 
 服务端**不接受** `generate_sound`、`audio`、`width`、`height`、`num_frames`、`quality`、`steps` 等字段（实测会返回 400）。因此音频关闭采用「本地移除音轨」而不是服务端开关。
 
 提示词字段也有限制：实测 `positive_prompt` 不是 `/v1/videos` 字段（400），`negative_prompt` 字段虽被识别，但该模型返回 `this model takes no guidance`（400）。所以插件不发送独立的正/负字段，而是在本地把正向提示词、用户 prompt 和 `Avoid: 负向提示词` 合成为一个 `prompt`。这是文本约束，不等同于独立的 negative guidance。
+
+推理步数在不同模型上有差异：当前 `minimax-h3` 端点实测接受 `num_inference_steps=25`；较早的 `fastvideo-fasth3-8-step-v2` 只接受 `9`。插件默认 25，提交时会先尝试 25，若服务端明确返回 schedule 错误则自动省略该字段、按训练 schedule 生成，并在结果 `warning` 中提示。
 
 响应流程：
 
@@ -113,11 +117,13 @@ DSH 会通过 profile manifest / HMR 重新组装插件树；宿主插件代码�
 | `enabled` | `true` | 是否注册 `video_generate` 工具 |
 | `endpoint` | `http://ai9700:8080/upstream/MiniMax-H3-Video/v1` | 基础端点（含端口）。插件自动补 `/videos`；也可填完整 `.../v1/videos` 或只填 `http://host:port` |
 | `apiKey` | 空 | 可选；secret 字段，保存后只显示「已保存」，不回传明文。FastVideo 本地通常不需要 |
-| `model` | `fastvideo-fasth3-8-step-v2` | 服务端 `/v1/models` 公布的模型 ID |
+| `model` | `minimax-h3` | 服务端 `/v1/models` 公布的模型 ID |
 | `size` | `1344x768` | 分辨率 |
 | `seconds` | `5` | 请求时长；0 = 服务端默认帧数 |
 | `audio` | `keep` | `keep` 保留音轨 / `strip` 下载后用 ffmpeg 移除 |
 | `sampler` | `res_multistep` | `euler` 或 `res_multistep` |
+| `numInferenceSteps` | `25` | `num_inference_steps`；当前 minimax-h3 接受 25，旧 fastvideo 模型仅 9，插件会自动回退并提示 |
+| `latentUpscale` | `4` | `latent_upscale`，1–4 |
 | `positivePrompt` | 胶片纪实风格默认文案 | 正向系统提示词；置于用户 prompt 前 |
 | `positivePromptDisabled` | `false` | 勾选后默认正向提示词不参与合成 |
 | `negativePrompt` | 避免油画/HDR/过度修肤默认文案 | 负向约束；以 `Avoid: ...` 置于 prompt 末尾 |
@@ -138,6 +144,8 @@ DSH 会通过 profile manifest / HMR 重新组装插件树；宿主插件代码�
     "size": "768x1344",
     "seconds": 8,
     "withAudio": false,
+    "numInferenceSteps": 25,
+    "latentUpscale": 4,
     "positivePrompt": "shot on 35mm film, Kodak Portra 400",
     "negativePrompt": "oil painting, HDR, glossy",
     "seed": 42,
@@ -153,11 +161,13 @@ DSH 会通过 profile manifest / HMR 重新组装插件树；宿主插件代码�
 {
   "id": "video_...",
   "status": "completed",
-  "model": "fastvideo-fasth3-8-step-v2",
+  "model": "minimax-h3",
   "prompt": "用户原始描述",
   "effectivePrompt": "正向提示词 + 用户描述 + Avoid: 负向提示词",
   "size": "768x1344",
   "seconds": 5.17,
+  "numInferenceSteps": 25,
+  "latentUpscale": 4,
   "withAudio": false,
   "audioStripped": true,
   "filePath": "/path/to/workspace/.dsh-video-gen/video-...mp4",
@@ -190,7 +200,7 @@ its canvas at that ratio is 768x1344
 ## 常见问题
 
 - **404 / 端点错误**：检查 `endpoint` 是否指向 `/v1`（插件自动补 `/videos`），端口是否为 `8080`。设置页点「测试连接」会检查 `/health` 与视频列表；该 upstream 代理的 `/v1/models` 可能超时，不影响生成。
-- **模型 ID 不匹配**：默认 `fastvideo-fasth3-8-step-v2` 已由 `/health` 返回；若代理暴露模型列表，可在设置页「测试连接」中核对。
+- **模型 ID 不匹配**：默认 `minimax-h3` 已由 `/health` 返回；若代理暴露模型列表，可在设置页「测试连接」中核对。
 - **时长被服务端取整**：例如请求 1 秒，H3 会按合法帧网格输出 5.17 秒；结果里会给出 `warning`，说明实际时长。
 - **轮询超时**：生成 14 秒视频可能需要更久；把 `timeoutSec` 调大。超时不会取消服务端 GPU 任务，返回的 job id 仍可查询。
 - **音频移除失败**：确认 `ffmpeg` 已安装：`ffmpeg -version`。
