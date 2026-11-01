@@ -14,7 +14,7 @@ DeepSeek Harness 插件：**文本 → 视频**。
 
 ## 功能
 
-1. **设置页**：端点、API Key（可选）、模型、分辨率、时长、音频、sampler、seed、正向/负向系统提示词、输出目录、轮询超时/间隔、是否删除远端任务。
+1. **设置页**：端点、API Key（可选）、模型、分辨率、时长、音频、sampler、seed、正向/负向系统提示词（各自可禁用）、输出目录、轮询超时/间隔、是否删除远端任务。
 2. **`video_generate` 工具**：模型可按 prompt 生成视频；调用参数可临时覆盖设置（分辨率、时长、音频、seed、模型、sampler、文件名、正向/负向提示词）。
 3. **本地保存**：MP4 写入会话工作目录（默认 `.dsh-video-gen/`），返回绝对路径。
 4. **浏览器预览**：插件注册 `/api/dsh-video-gen/artifacts/<token>` 流路由，支持 Range 请求，对话卡片中可直接播放、下载。
@@ -99,7 +99,12 @@ DSH 会通过 profile manifest / HMR 重新组装插件树；宿主插件代码�
 - **负向**：
   `oil painting, ultra detailed, 8k, hyperrealistic, cinematic glow, rim light, glossy, flawless/beauty retouched skin, HDR, dramatic lighting`
 
-设置页可逐字编辑或清空；工具调用参数 `positivePrompt` / `negativePrompt` 可只对单次调用覆盖。默认文本已写入 `cordis.patch.yml` 和 Config schema。
+设置页可逐字编辑或清空；正向提示词旁有「禁用正向提示词」复选框，负向提示词旁有「禁用负向提示词」复选框。
+
+- **正向提示词默认启用**。
+- **负向提示词默认禁用**（勾选框默认勾上，因此默认合成时不会加 `Avoid: …`）。取消勾选后才启用。
+- 禁用只关闭「设置里的默认提示词」；单次调用仍可显式传 `positivePrompt` / `negativePrompt` 覆盖。
+- 默认文本已写入 `cordis.patch.yml` 和 Config schema。
 
 ## 配置项
 
@@ -114,7 +119,9 @@ DSH 会通过 profile manifest / HMR 重新组装插件树；宿主插件代码�
 | `audio` | `keep` | `keep` 保留音轨 / `strip` 下载后用 ffmpeg 移除 |
 | `sampler` | `res_multistep` | `euler` 或 `res_multistep` |
 | `positivePrompt` | 胶片纪实风格默认文案 | 正向系统提示词；置于用户 prompt 前 |
+| `positivePromptDisabled` | `false` | 勾选后默认正向提示词不参与合成 |
 | `negativePrompt` | 避免油画/HDR/过度修肤默认文案 | 负向约束；以 `Avoid: ...` 置于 prompt 末尾 |
+| `negativePromptDisabled` | `true` | 默认禁用；取消勾选后才参与合成 |
 | `seed` | 空（随机） | 整数可复现 |
 | `outputDir` | `.dsh-video-gen` | 相对会话工作目录；可写绝对路径 |
 | `timeoutSec` | `900` | 轮询超时；超时不取消服务端 GPU 任务 |
